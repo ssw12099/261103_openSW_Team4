@@ -8,10 +8,10 @@ with tempfile.TemporaryDirectory() as temp:
     r.DATA=Path(temp)
     r.SPACES=r.DATA/'spaces.csv'
     r.RESERVATIONS=r.DATA/'reservations.csv'
-    r.SPACES.write_text('space_id,name,type,capacity\nS001,회의실 A,회의실,4\n',encoding='utf-8')
+    r.SPACES.write_text('space_id,name,type,capacity\nS01,회의실 A,회의실,4\n',encoding='utf-8')
     day=(date.today()+timedelta(days=1)).isoformat()
     assert len(available(day,'10:00','11:00',2))==1
-    saved=book('S001',day,'10:00','11:00',2,'테스트')
+    saved=book('S01',day,'10:00','11:00',2,'테스트')
     assert saved['reservation_id']=='R0001'
     assert len(available(day,'10:30','11:30',2))==0
     assert len(available(day,'11:00','12:00',2))==1
