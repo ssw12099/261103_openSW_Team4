@@ -1,6 +1,6 @@
 from datetime import date, timedelta, datetime
 import streamlit as st
-from reservation import (ReservationError, spaces, available, book, lookup, can_cancel, cancel, staff_view, OPEN_HOUR, CLOSE_HOUR, STEP_MINUTES)
+from reservation import (ReservationError, spaces, available, book, lookup, can_cancel, cancel, staff_view, reservation_table, OPEN_HOUR, CLOSE_HOUR, STEP_MINUTES)
 from chatbot import answer, ChatError
 
 st.set_page_config(page_title='모아공간 예약 관리',page_icon='📅',layout='wide')
@@ -9,9 +9,8 @@ st.caption('로컬 시연용 시스템 · 예약/취소 내역은 CSV 파일에 
 menu=st.sidebar.radio('메뉴',['공간 조회 및 예약','내 예약 조회 · AI 챗봇','예약 취소','운영 직원 예약 현황'])
 
 def show_error(e): st.error(str(e))
-def details(r):
-    labels={'reservation_id':'예약 ID','space_id':'공간 ID','date':'이용일','start_time':'시작','end_time':'종료','people':'인원','reserver':'예약자명','status':'상태'}
-    st.table({labels.get(k,k):[v] for k,v in r.items()})
+def details(record, rooms):
+    st.table(reservation_table([record], rooms))
 
 if menu=='공간 조회 및 예약':
     st.subheader('F-01 공간 조회 / F-02 예약 신청')
@@ -47,7 +46,7 @@ if menu=='공간 조회 및 예약':
                     try:
                         saved=book(selected,q['day'],q['start'],q['end'],q['people'],reserver)
                         st.success('예약이 확정되었습니다. 예약 ID를 보관하세요.')
-                        details(saved)
+                        details(saved, rooms)
                         st.session_state.pop('search_result',None)
                     except ReservationError as exc: show_error(exc)
         except ReservationError as exc: show_error(exc)
@@ -67,7 +66,7 @@ elif menu=='내 예약 조회 · AI 챗봇':
         try:
             record=lookup(record['reservation_id'],record['reserver'])
             st.session_state['verified']=record
-            details(record)
+            details(record, spaces())
             allowed,reason=can_cancel(record)
             st.info(reason)
             st.caption('챗봇에는 본인 확인된 예약 1건만 전달합니다. 예약·취소는 수행하지 않습니다.')
@@ -97,14 +96,15 @@ elif menu=='예약 취소':
     if target:
         try:
             target=lookup(target['reservation_id'],target['reserver'])
-            details(target)
+            rooms=spaces()
+            details(target, rooms)
             allowed,reason=can_cancel(target)
             st.info(reason)
             if allowed and st.button('취소 확정',type='primary'):
                 canceled=cancel(target['reservation_id'],target['reserver'])
                 st.session_state.pop('cancel_target',None)
                 st.success('예약이 취소되었습니다.')
-                details(canceled)
+                details(canceled, rooms)
         except ReservationError as exc: show_error(exc)
 
 else:
@@ -117,5 +117,5 @@ else:
         if st.button('예약 조회'):
             df=staff_view(day,choice)
             if df.empty: st.info('해당 날짜의 예약이 없습니다.')
-            else: st.dataframe(df,hide_index=True,use_container_width=True)
+            else: st.dataframe(reservation_table(df, rooms),hide_index=True,use_container_width=True)
     except ReservationError as exc: show_error(exc)
