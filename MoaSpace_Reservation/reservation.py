@@ -142,3 +142,20 @@ def staff_view(day,space_id='전체'):
     df=df[df['date']==str(day)]
     if space_id!='전체': df=df[df['space_id']==space_id]
     return df.sort_values(['space_id','start_time']).reset_index(drop=True)
+
+def reservation_table(records, rooms):
+    labels = {
+        'reservation_id': '예약 ID',
+        'space_id': '공간명',
+        'date': '이용일',
+        'start_time': '시작 시간',
+        'end_time': '종료 시간',
+        'people': '신청 인원',
+        'reserver': '예약자명',
+        'status': '예약 상태',
+    }
+    display = pd.DataFrame(records, columns=list(labels), copy=True)
+    room_names = rooms.set_index('space_id')['name']
+    space_ids = display['space_id']
+    display['space_id'] = space_ids.map(room_names).fillna('알 수 없는 공간 (' + space_ids + ')')
+    return display.rename(columns=labels)
